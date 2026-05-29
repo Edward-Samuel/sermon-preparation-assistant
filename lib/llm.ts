@@ -145,6 +145,12 @@ The JSON must have exactly this structure:
   "smallGroupTeachingNotes": "string — guidance for leading a small group study",
   "prayerPoints": ["string — 4-6 prayer points related to the sermon"],
   "closingChallenge": "string — powerful closing challenge paragraph",
+  "childrenSermon": "string — a simple, engaging 5-minute children's sermon based on the same topic. Use a story, object lesson, or simple analogy. Include a short prayer at the end. Keep language simple and age-appropriate (ages 4-12).",
+  "socialMediaPack": {
+    "whatsapp": "string — a short, inspiring message with the key scripture verse, suitable for sharing on WhatsApp status or group (2-3 sentences max)",
+    "instagram": "string — a short caption with the sermon big idea, key verse, and 3-5 relevant hashtags",
+    "facebook": "string — a slightly longer post (3-4 sentences) with the key takeaway and an encouraging question for engagement"
+  },
   "relatedVideos": [
     {
       "title": "string — descriptive title of the video",
@@ -171,7 +177,9 @@ IMPORTANT RULES:
 5. All string values must be properly escaped for JSON (no unescaped newlines or quotes).
 6. Include 4–6 related videos and 4–6 worship songs that fit the sermon topic and tone. Use well-known sermons, teaching videos, and popular worship songs.
 7. For "relatedVideos" and "worshipSongs": when the output language is not English, suggest videos and worship songs that ACTUALLY EXIST in ${langLabel} (e.g. popular ${langLabel} Christian worship songs and ${langLabel} Bible teaching/sermon videos). Write the "title", "description", and "artist" in ${langLabel}, and write the "searchQuery" in ${langLabel} so it finds ${langLabel}-language results on YouTube. Scripture references may remain in standard book-name form.
-8. Leave "videoId" as an empty string for all items — the server automatically resolves real YouTube video IDs from your searchQuery. Focus your effort on writing a precise "searchQuery" that will surface the intended video as the top YouTube result.`
+8. Leave "videoId" as an empty string for all items — the server automatically resolves real YouTube video IDs from your searchQuery. Focus your effort on writing a precise "searchQuery" that will surface the intended video as the top YouTube result.
+9. Include a children's sermon that is simple, story-based, and age-appropriate for 4-12 year olds.
+10. Include a socialMediaPack with WhatsApp, Instagram, and Facebook ready-to-share content.`
 }
 
 export async function callLLM(prompt: string): Promise<string> {

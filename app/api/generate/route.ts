@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SermonInput, SermonPack, SermonTone, Language } from '@/lib/types'
 import { buildSermonPrompt, callLLM } from '@/lib/llm'
-import { pickRelatedVideos, pickWorshipSongs } from '@/lib/sermon-generator'
+import { pickRelatedVideos, pickWorshipSongs, pickChildrenSermon, pickSocialMediaPack } from '@/lib/sermon-generator'
 import { resolveVideoIds } from '@/lib/youtube'
 
 const VALID_LANGUAGES: Language[] = ['en', 'ta', 'ml', 'te']
@@ -94,6 +94,8 @@ export async function POST(req: NextRequest) {
       smallGroupTeachingNotes: parsed.smallGroupTeachingNotes || '',
       prayerPoints: parsed.prayerPoints || [],
       closingChallenge: parsed.closingChallenge || '',
+      childrenSermon: parsed.childrenSermon || pickChildrenSermon(input),
+      socialMediaPack: parsed.socialMediaPack || pickSocialMediaPack(input),
       relatedVideos,
       worshipSongs,
     }

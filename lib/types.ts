@@ -39,6 +39,12 @@ export interface WorshipSong {
   searchQuery: string // e.g. "Goodness of God Bethel Music lyrics"
 }
 
+export interface SocialMediaPack {
+  whatsapp: string
+  instagram: string
+  facebook: string
+}
+
 export interface SermonPack {
   id: string
   createdAt: string
@@ -58,6 +64,8 @@ export interface SermonPack {
   smallGroupTeachingNotes: string
   prayerPoints: string[]
   closingChallenge: string
+  childrenSermon: string
+  socialMediaPack: SocialMediaPack
   relatedVideos: RelatedVideo[]
   worshipSongs: WorshipSong[]
 }

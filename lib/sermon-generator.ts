@@ -1,4 +1,4 @@
-import { SermonInput, SermonPack, SermonOutlinePoint, SermonTone, RelatedVideo, WorshipSong } from './types'
+import { SermonInput, SermonPack, SermonOutlinePoint, SermonTone, RelatedVideo, WorshipSong, SocialMediaPack } from './types'
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
@@ -356,6 +356,29 @@ function pickClosingChallenge(input: SermonInput): string {
   return closings[idx]
 }
 
+export function pickChildrenSermon(input: SermonInput): string {
+  const topic = input.topic.trim() || 'God\'s love'
+  return `**A Story for Little Hearts: ${topic}**
+
+*Object Lesson:* Bring a small mirror or a picture of a smiling face. Ask the children: "What do you see when you look in a mirror? You see YOU! God made you special and He loves you very much."
+
+*The Story:* Once there was a little child who felt sad because they thought nobody noticed them. But Jesus saw them. Jesus sees every child — He knows your name, He knows when you're happy or sad, and He always has time for you. The Bible tells us that Jesus said, 'Let the little children come to me.'
+
+*Question:* Can you tell me one thing that makes you happy? (Let children respond.) God wants you to be happy, and He wants to help you when you're sad.
+
+*Prayer:* Dear God, thank You for loving every child here. Help us to remember that You are always with us. In Jesus' name, Amen.`
+}
+
+export function pickSocialMediaPack(input: SermonInput): SocialMediaPack {
+  const topic = input.topic.trim() || 'God\'s love'
+  const scripture = input.scripture.trim() || 'John 3:16'
+  return {
+    whatsapp: `🙏 *${topic}*\n\n"${scripture}" reminds us that God is faithful in every season. Trust Him today!`,
+    instagram: `✨ ${topic}\n\n"${scripture}"\n\nGod's Word is a lamp to our feet. What is He speaking to you today?\n\n#SermonPrep #Faith #${topic.replace(/\s/g, '')} #Bible #ChristianLife`,
+    facebook: `Today's reflection: ${topic}\n\n${scripture} teaches us that God's promises never fail. In a world full of uncertainty, we can anchor our hope in Him.\n\nWhat is one area where you need to trust God more this week? Share in the comments below. 🙏`,
+  }
+}
+
 export function pickRelatedVideos(input: SermonInput): RelatedVideo[] {
   const topic = input.topic.trim() || 'faith'
   return [
@@ -465,6 +488,8 @@ export function generateSermonPack(input: SermonInput): SermonPack {
     smallGroupTeachingNotes: pickSmallGroupNotes(input),
     prayerPoints: pickPrayerPoints(input),
     closingChallenge: pickClosingChallenge(input),
+    childrenSermon: pickChildrenSermon(input),
+    socialMediaPack: pickSocialMediaPack(input),
     relatedVideos: pickRelatedVideos(input),
     worshipSongs: pickWorshipSongs(input),
   }
@@ -572,6 +597,26 @@ export function packToMarkdown(pack: SermonPack): string {
   lines.push('## Closing Challenge')
   lines.push('')
   lines.push(pack.closingChallenge)
+  lines.push('')
+
+  lines.push('## Children\'s Sermon')
+  lines.push('')
+  lines.push(pack.childrenSermon)
+  lines.push('')
+
+  lines.push('## Social Media Pack')
+  lines.push('')
+  lines.push('### WhatsApp')
+  lines.push('')
+  lines.push(pack.socialMediaPack.whatsapp)
+  lines.push('')
+  lines.push('### Instagram')
+  lines.push('')
+  lines.push(pack.socialMediaPack.instagram)
+  lines.push('')
+  lines.push('### Facebook')
+  lines.push('')
+  lines.push(pack.socialMediaPack.facebook)
   lines.push('')
 
   lines.push('## Related Videos')
