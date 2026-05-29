@@ -1,11 +1,14 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { SermonInput, SermonTone, SermonPack, SavedSermon } from '@/lib/types'
+import { SermonInput, SermonTone, SermonPack, SavedSermon, Language } from '@/lib/types'
 import { generateSermonPack, packToMarkdown } from '@/lib/sermon-generator'
 import { getSavedSermons, saveSermon, deleteSermon } from '@/lib/storage'
 
 type View = 'compose' | 'output' | 'history'
+
+type GenerationMode = 'ai' | 'deterministic'
+type Theme = 'light' | 'dark'
 
 const TONE_OPTIONS: { value: SermonTone; label: string; desc: string }[] = [
   { value: 'expository', label: 'Expository', desc: 'Verse-by-verse, text-driven preaching' },
@@ -16,12 +19,31 @@ const TONE_OPTIONS: { value: SermonTone; label: string; desc: string }[] = [
   { value: 'pastoral-care', label: 'Pastoral Care', desc: 'Comfort and shepherding emphasis' },
 ]
 
+const DENOMINATION_OPTIONS = [
+  { value: 'catholic', label: 'Roman Catholic' },
+  { value: 'reformed', label: 'Reformed / Presbyterian' },
+  { value: 'baptist', label: 'Baptist' },
+  { value: 'methodist', label: 'Methodist / Wesleyan / Holiness' },
+  { value: 'pentecostal', label: 'Pentecostal / Charismatic' },
+  { value: 'lutheran', label: 'Lutheran' },
+  { value: 'anglican', label: 'Anglican / Episcopal' },
+  { value: 'non-denominational', label: 'Non-Denominational / Evangelical' },
+  { value: 'other', label: 'Other / Unspecified' },
+]
+
 const LENGTH_OPTIONS = [
   { value: 'standard', label: 'Standard (20-30 min)' },
   { value: 'extended', label: 'Extended (35-45 min)' },
   { value: '45+', label: 'Long (45+ min)' },
   { value: '60+', label: 'Full Hour (60+ min)' },
   { value: 'brief', label: 'Brief (10-15 min)' },
+]
+
+const LANGUAGE_OPTIONS: { value: Language; label: string }[] = [
+  { value: 'en', label: 'English' },
+  { value: 'ta', label: 'தமிழ் (Tamil)' },
+  { value: 'ml', label: 'മലയാളം (Malayalam)' },
+  { value: 'te', label: 'తెలుగు (Telugu)' },
 ]
 
 function Toast({ message, onDone }: { message: string; onDone: () => void }) {
@@ -35,15 +57,22 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
 function SermonForm({
   onGenerate,
   initialInput,
+  generationMode,
+  onGenerationModeChange,
+  language,
 }: {
-  onGenerate: (input: SermonInput) => void
+  onGenerate: (input: Omit<SermonInput, 'language'>) => void
   initialInput?: SermonInput | null
+  generationMode: GenerationMode
+  onGenerationModeChange: (mode: GenerationMode) => void
+  language: Language
 }) {
   const [topic, setTopic] = useState(initialInput?.topic ?? '')
   const [scripture, setScripture] = useState(initialInput?.scripture ?? '')
   const [audience, setAudience] = useState(initialInput?.audience ?? '')
   const [sermonLength, setSermonLength] = useState(initialInput?.sermonLength ?? 'standard')
   const [tone, setTone] = useState<SermonTone>(initialInput?.tone ?? 'expository')
+  const [denomination, setDenomination] = useState(initialInput?.denomination ?? 'non-denominational')
   const [notes, setNotes] = useState(initialInput?.notes ?? '')
 
   useEffect(() => {
@@ -53,6 +82,7 @@ function SermonForm({
       setAudience(initialInput.audience)
       setSermonLength(initialInput.sermonLength)
       setTone(initialInput.tone)
+      setDenomination(initialInput.denomination ?? 'non-denominational')
       setNotes(initialInput.notes)
     }
   }, [initialInput])
@@ -60,7 +90,7 @@ function SermonForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!topic.trim() && !scripture.trim()) return
-    onGenerate({ topic, scripture, audience, sermonLength, tone, notes })
+    onGenerate({ topic, scripture, audience, sermonLength, tone, denomination, notes })
   }
 
   return (
@@ -73,19 +103,18 @@ function SermonForm({
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
           placeholder='e.g. "The Faithfulness of God", "Forgiveness"'
-          required={!scripture.trim()}
+          required
         />
       </div>
 
       <div className="form-group">
-        <label htmlFor="scripture">Scripture Passage *</label>
+        <label htmlFor="scripture">Scripture Passage</label>
         <input
           id="scripture"
           type="text"
           value={scripture}
           onChange={(e) => setScripture(e.target.value)}
           placeholder='e.g. "Romans 8:28-30", "John 3:16-21"'
-          required={!topic.trim()}
         />
       </div>
 
@@ -118,6 +147,23 @@ function SermonForm({
       </div>
 
       <div className="form-group">
+        <label htmlFor="denomination">
+          Denomination / Tradition <span className="optional">(optional)</span>
+        </label>
+        <select
+          id="denomination"
+          value={denomination}
+          onChange={(e) => setDenomination(e.target.value)}
+        >
+          {DENOMINATION_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="form-group">
         <label htmlFor="tone">Tone / Style Preset</label>
         <select id="tone" value={tone} onChange={(e) => setTone(e.target.value as SermonTone)}>
           {TONE_OPTIONS.map((opt) => (
@@ -141,9 +187,40 @@ function SermonForm({
         />
       </div>
 
+      <div className="form-group">
+        <label>Generation Mode</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+            <input
+              type="radio"
+              name="generationMode"
+              value="ai"
+              checked={generationMode === 'ai'}
+              onChange={() => onGenerationModeChange('ai')}
+            />
+            🤖 AI-Powered (LLM generation)
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+            <input
+              type="radio"
+              name="generationMode"
+              value="deterministic"
+              checked={generationMode === 'deterministic'}
+              onChange={() => onGenerationModeChange('deterministic')}
+            />
+            📦 Offline (Deterministic — no AI)
+          </label>
+          {generationMode === 'deterministic' && language !== 'en' && (
+            <p style={{ fontSize: '0.8rem', color: 'var(--color-warning-text)', marginTop: '0.5rem' }}>
+              ⚠️ Offline mode produces English content only. Choose AI mode for {LANGUAGE_OPTIONS.find(o=>o.value===language)?.label} output.
+            </p>
+          )}
+        </div>
+      </div>
+
       <div className="form-actions">
         <button type="submit" className="btn btn-primary" disabled={!topic.trim() && !scripture.trim()}>
-          Generate Sermon Pack
+          {generationMode === 'ai' ? 'Generate with AI' : 'Generate Offline Pack'}
         </button>
       </div>
     </form>
@@ -234,7 +311,7 @@ function SermonOutputView({
           {pack.title}
         </h2>
         <div style={{ fontSize: '0.825rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
-          {pack.input.tone} · {pack.input.audience || 'General audience'} · {pack.input.sermonLength || 'Standard length'}
+          {pack.input.tone} · {pack.input.audience || 'General audience'} · {pack.input.sermonLength || 'Standard length'}{pack.input.denomination && pack.input.denomination !== 'non-denominational' ? ` · ${DENOMINATION_OPTIONS.find((o) => o.value === pack.input.denomination)?.label ?? pack.input.denomination}` : ''}
         </div>
       </div>
 
@@ -352,6 +429,36 @@ function SermonOutputView({
         </ul>
       </div>
 
+      {/* Related Videos */}
+      <div className="section">
+        <div className="section-title">Related Videos</div>
+        <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
+          {pack.relatedVideos.map((v, i) => (
+            <li key={i} style={{ marginBottom: '1.25rem', listStyle: 'none' }}>
+              <div style={{ fontWeight: 600, color: 'var(--color-primary)', marginBottom: '0.25rem' }}>{v.title}</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>{v.description}</div>
+              <VideoEmbed videoId={v.videoId} title={v.title} searchQuery={v.searchQuery} />
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Worship Songs */}
+      <div className="section">
+        <div className="section-title">Worship Songs</div>
+        <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
+          {pack.worshipSongs.map((s, i) => (
+            <li key={i} style={{ marginBottom: '1.25rem', listStyle: 'none' }}>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{s.title}</span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginLeft: '0.3rem' }}>— {s.artist}</span>
+              </div>
+              <VideoEmbed videoId={s.videoId} title={s.title} searchQuery={s.searchQuery} />
+            </li>
+          ))}
+        </ul>
+      </div>
+
       {/* Closing Challenge */}
       <div className="section">
         <div className="section-title">Closing Challenge</div>
@@ -390,7 +497,7 @@ function HistoryPanel({
             <h4>{item.topic || item.scripture || 'Untitled Sermon'}</h4>
             <div className="history-item-meta">
               {item.scripture && item.topic ? `${item.scripture} · ` : ''}
-              {item.tone} · {new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              {item.tone}{item.denomination && item.denomination !== 'non-denominational' ? ` · ${DENOMINATION_OPTIONS.find((o) => o.value === item.denomination)?.label ?? item.denomination}` : ''} · {new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </div>
           </div>
           <div className="history-item-actions">
@@ -404,7 +511,73 @@ function HistoryPanel({
   )
 }
 
+function youtubeSearchUrl(query: string): string {
+  const q = encodeURIComponent(query)
+  return `https://www.youtube.com/results?search_query=${q}`
+}
+
+function youtubeEmbedUrl(videoId: string): string {
+  return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`
+}
+
+function youtubeThumbUrl(videoId: string): string {
+  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+}
+
+function VideoEmbed({ videoId, title, searchQuery }: { videoId?: string; title: string; searchQuery: string }) {
+  const [playing, setPlaying] = React.useState(false)
+
+  // No reliable videoId -> just show a search link (no iframe possible without an ID)
+  if (!videoId) {
+    return (
+      <a
+        className="yt-search-link"
+        href={youtubeSearchUrl(searchQuery)}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        ▶ Search on YouTube
+      </a>
+    )
+  }
+
+  return (
+    <div className="yt-embed">
+      <div className="yt-embed-frame">
+        {playing ? (
+          <iframe
+            src={youtubeEmbedUrl(videoId)}
+            title={title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            loading="lazy"
+          />
+        ) : (
+          <button
+            type="button"
+            className="yt-embed-thumb"
+            onClick={() => setPlaying(true)}
+            aria-label={`Play ${title}`}
+            style={{ backgroundImage: `url(${youtubeThumbUrl(videoId)})` }}
+          >
+            <span className="yt-play-button" aria-hidden="true">▶</span>
+          </button>
+        )}
+      </div>
+      <a
+        className="yt-fallback-link"
+        href={youtubeSearchUrl(searchQuery)}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Not the right video? Search on YouTube
+      </a>
+    </div>
+  )
+}
+
 export default function HomePage() {
+  // ── Core state ──
   const [view, setView] = useState<View>('compose')
   const [currentPack, setCurrentPack] = useState<SermonPack | null>(null)
   const [isSaved, setIsSaved] = useState(false)
@@ -412,18 +585,97 @@ export default function HomePage() {
   const [toast, setToast] = useState<string | null>(null)
   const [formInput, setFormInput] = useState<SermonInput | null>(null)
 
-  // Load history on mount
+  // ── Generation mode ──
+  const [generationMode, setGenerationMode] = useState<GenerationMode>('ai')
+  const [isLoading, setIsLoading] = useState(false)
+  const [loadingMessage, setLoadingMessage] = useState('')
+
+  // ── Theme state ──
+  const [theme, setTheme] = useState<Theme>('light')
+  const [themeReady, setThemeReady] = useState(false)
+
+  // ── Language state ──
+  const [language, setLanguage] = useState<Language>('en')
+
+  // ── Load history on mount ──
   useEffect(() => {
     setHistory(getSavedSermons())
   }, [])
 
-  const handleGenerate = useCallback((input: SermonInput) => {
-    const pack = generateSermonPack(input)
-    setCurrentPack(pack)
-    setIsSaved(false)
-    setView('output')
+  // ── Theme initialization ──
+  useEffect(() => {
+    const stored = localStorage.getItem('sermon-prep-theme')
+    let initial: Theme = 'light'
+    if (stored === 'dark' || stored === 'light') {
+      initial = stored
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      initial = 'dark'
+    }
+    setTheme(initial)
+    document.documentElement.dataset.theme = initial
+    setThemeReady(true)
   }, [])
 
+  // ── Language initialization ──
+  useEffect(() => {
+    const stored = localStorage.getItem('sermon-prep-language')
+    if (stored === 'en' || stored === 'ta' || stored === 'ml') {
+      setLanguage(stored)
+    }
+  }, [])
+
+  // ── Generate handler ──
+  const handleGenerate = useCallback(
+    (partial: Omit<SermonInput, 'language'>) => {
+      const input: SermonInput = { ...partial, language }
+
+      if (generationMode === 'ai') {
+        setIsLoading(true)
+        setLoadingMessage('Generating sermon with AI... This may take up to 30 seconds.')
+        fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(input),
+        })
+          .then(async (res) => {
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({ error: 'Generation failed' }))
+              throw new Error(err.error || `Server error ${res.status}`)
+            }
+            return res.json()
+          })
+          .then((data) => {
+            const pack: SermonPack = {
+              ...data.pack,
+              id: data.pack.id || (Date.now().toString(36) + Math.random().toString(36).slice(2, 8)),
+              createdAt: data.pack.createdAt || new Date().toISOString(),
+            }
+            setCurrentPack(pack)
+            setIsSaved(false)
+            setView('output')
+          })
+          .catch((err: Error) => {
+            setToast(err.message)
+          })
+          .finally(() => {
+            setIsLoading(false)
+            setLoadingMessage('')
+          })
+      } else {
+        // Deterministic / offline mode
+        if (language !== 'en') {
+          setToast('Offline mode generates English only. Switch to AI mode for Tamil/Malayalam.')
+        }
+        const pack = generateSermonPack(input)
+        setCurrentPack(pack)
+        setIsSaved(false)
+        setView('output')
+      }
+    },
+    [generationMode, language],
+  )
+
+  // ── History handlers ──
   const handleSave = useCallback(() => {
     if (!currentPack) return
     const updated = saveSermon(currentPack)
@@ -450,8 +702,58 @@ export default function HomePage() {
     setFormInput(null)
   }, [])
 
+  // ── Theme toggle ──
+  const handleThemeToggle = useCallback(() => {
+    setTheme((prev) => {
+      const next: Theme = prev === 'light' ? 'dark' : 'light'
+      localStorage.setItem('sermon-prep-theme', next)
+      document.documentElement.dataset.theme = next
+      return next
+    })
+  }, [])
+
   return (
     <>
+      {/* Spinner keyframes injected via style jsx */}
+      <style jsx global>{`
+        @keyframes spa-spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+
+      {/* Loading overlay */}
+      {isLoading && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              border: '4px solid rgba(255,255,255,0.3)',
+              borderTopColor: '#fff',
+              borderRadius: '50%',
+              animation: 'spa-spin 0.8s linear infinite',
+              marginBottom: '1rem',
+            }}
+          />
+          <div style={{ color: '#fff', fontSize: '1rem', textAlign: 'center', maxWidth: '400px' }}>
+            {loadingMessage}
+          </div>
+        </div>
+      )}
+
       <header className="app-header">
         <div className="container">
           <h1>
@@ -470,9 +772,50 @@ export default function HomePage() {
             >
               History ({history.length})
             </button>
+            {themeReady && (
+              <button
+                className="theme-toggle"
+                onClick={handleThemeToggle}
+                aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              >
+                {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
+              </button>
+            )}
+            <select
+              className="lang-select"
+              value={language}
+              onChange={(e) => {
+                const next = e.target.value as Language
+                setLanguage(next)
+                try { localStorage.setItem('sermon-prep-language', next) } catch {}
+              }}
+              aria-label="Select output language"
+            >
+              {LANGUAGE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
           </nav>
         </div>
       </header>
+
+      {/* AI Status Banner */}
+      {(view === 'compose' || view === 'output') && (
+        <div
+          style={{
+            background: generationMode === 'ai' ? 'var(--color-primary-light)' : 'var(--color-success-bg)',
+            borderBottom: '1px solid ' + (generationMode === 'ai' ? 'var(--color-primary)' : 'var(--color-success)'),
+            padding: '0.5rem 0',
+            textAlign: 'center',
+            fontSize: '0.85rem',
+            color: generationMode === 'ai' ? 'var(--color-primary)' : 'var(--color-success)',
+          }}
+        >
+          {generationMode === 'ai'
+            ? '🤖 AI Mode — LLM-powered sermon generation'
+            : '📦 Offline Mode — Built-in template engine (no AI calls)'}
+        </div>
+      )}
 
       <main className="main-content">
         <div className="container">
@@ -489,7 +832,13 @@ export default function HomePage() {
             <div className="page-grid">
               <div className="card">
                 <h2>Sermon Details</h2>
-                <SermonForm onGenerate={handleGenerate} initialInput={formInput} />
+                <SermonForm
+                  onGenerate={handleGenerate}
+                  initialInput={formInput}
+                  generationMode={generationMode}
+                  onGenerationModeChange={setGenerationMode}
+                  language={language}
+                />
               </div>
               <div className="card">
                 <h2>How It Works</h2>
@@ -515,11 +864,19 @@ export default function HomePage() {
                     evangelistic proclamation to pastoral care.
                   </p>
                   <p style={{ marginBottom: '0.75rem' }}>
+                    <strong>AI-Powered mode</strong> uses an LLM to draft a comprehensive sermon
+                    based on your topic and scripture passage.
+                  </p>
+                  <p style={{ marginBottom: '0.75rem', fontSize: '0.85rem', color: 'var(--color-warning-text)' }}>
+                    Requires an OpenAI-compatible API key. Set OPENAI_API_KEY and OPENAI_BASE_URL in a
+                    .env.local file.
+                  </p>
+                  <p style={{ marginBottom: '0.75rem' }}>
                     <strong>Save your packs</strong> to revisit them later. Export as Markdown or
                     print as PDF for offline use.
                   </p>
                   <p style={{ fontSize: '0.85rem', fontStyle: 'italic' }}>
-                    All data is stored locally in your browser. Nothing is sent to any server.
+                    Sermon data is stored locally in your browser.
                   </p>
                 </div>
               </div>

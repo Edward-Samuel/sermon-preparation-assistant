@@ -1,63 +1,85 @@
 # Sermon Preparation Assistant
 
-A standalone Next.js + TypeScript web application that helps pastors prepare sermon packs with outlines, illustrations, discussion questions, and more.
+A sermon preparation tool for pastors and teachers. Generates comprehensive sermon preparation packs using an LLM or a built-in deterministic template engine — no external Bible data required.
 
 ## Features
 
-- **Sermon Pack Generation** — Produces a comprehensive preparation pack including title, big idea, pastoral aim, introduction hook, full outline with transitions, scripture references, historical/cultural background, theological themes, illustration suggestions, application steps, discussion questions, small group teaching notes, prayer points, and closing challenge.
-- **Tone Presets** — Choose from six preaching styles: Expository, Topical, Evangelistic, Youth, Bible Study, and Pastoral Care. Each preset adjusts the tone, emphasis, and approach of the generated content.
-- **History** — Save sermon packs to your browser's localStorage. Reload and delete saved packs at any time.
-- **Export** — Copy as Markdown, download as a `.md` file, or print/save as PDF via your browser's built-in print dialog.
-- **No Backend Required** — All generation happens locally in your browser. No database, no API keys, no external services.
+- **AI-Powered Sermon Generation** — Uses an LLM to draft sermons based on your topic and scripture passage.
+- **Offline/Deterministic Mode** — Built-in template engine that works with no AI, no API key, and no network connection.
+- **Tone Presets** — Six preaching styles: Expository, Topical, Evangelistic, Youth, Bible Study, and Pastoral Care.
+- **Full Sermon Pack** — title, big idea, pastoral aim, introduction hook, outline with transitions, key/references, historical/cultural background, theological themes, illustrations, application steps, discussion questions, small group teaching notes, prayer points, closing challenge.
+- **History & Export** — Save sermon packs to localStorage, export as Markdown or PDF.
+
+## Tech Stack
+
+- **Next.js 14** (App Router) + **TypeScript**
+- **Custom CSS** — No UI library; clean, lightweight styling
+- **OpenAI-compatible API** — For AI-powered sermon generation
+- **localStorage** — Client-side sermon history persistence
 
 ## Quick Start
 
 ```bash
-# Install dependencies
+# 1. Install dependencies
 npm install
 
-# Run in development mode
+# 2. Configure environment variables
+cp .env.example .env.local
+# Edit .env.local and fill in your OpenAI-compatible API key
+
+# 3. Start the development server
 npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
 ```
 
 The app will be available at [http://localhost:3000](http://localhost:3000).
 
+For production:
+
+```bash
+npm run build
+npm start
+```
+
 ## Environment Variables
 
-No environment variables are required. The app works fully offline with a built-in deterministic sermon generator.
+Create a `.env.local` file (copy from `.env.example`):
 
-## How to Use
+```
+OPENAI_API_KEY=your-key
+OPENAI_BASE_URL=https://your-provider/v1
+CHAT_MODEL=gpt-4o-mini
+```
 
-1. **Enter sermon details** — Fill in the topic/theme, scripture passage, audience context, sermon length, and tone preset. Optionally add notes or emphasis areas.
-2. **Generate** — Click "Generate Sermon Pack" to produce a full preparation pack.
-3. **Review and edit** — Read through the generated content. Use it as a starting point for your own prayerful study and preparation.
-4. **Save** — Click "Save to History" to store the pack in your browser for later access.
-5. **Export** — Use the export buttons to copy Markdown, download a `.md` file, or print/save as PDF.
-6. **History** — Click "History" in the header to view, reload, or delete previously saved sermon packs.
+| Variable | Description |
+|---|---|
+| `OPENAI_API_KEY` | API key for your OpenAI-compatible provider |
+| `OPENAI_BASE_URL` | Base URL for the provider (e.g., `https://api.openai.com/v1`) |
+| `CHAT_MODEL` | Model used for sermon generation (default: `gpt-4o-mini`) |
 
 ## Project Structure
 
 ```
 sermon-preparation-assistant/
 ├── app/
-│   ├── globals.css        # Global styles
-│   ├── layout.tsx         # Root layout
-│   └── page.tsx           # Main application page (client component)
+│   ├── api/
+│   │   └── generate/          # AI sermon generation endpoint
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx
 ├── lib/
-│   ├── sermon-generator.ts # Deterministic sermon pack generator
-│   ├── storage.ts          # localStorage CRUD operations
-│   └── types.ts            # TypeScript type definitions
-├── next.config.js
+│   ├── llm.ts                 # LLM auth and chat helpers
+│   ├── sermon-generator.ts    # Deterministic (offline) generator
+│   ├── storage.ts
+│   └── types.ts
 ├── package.json
-├── tsconfig.json
 └── README.md
 ```
+
+## API Endpoints
+
+| Method | Route | Description |
+|---|---|---|
+| `POST` | `/api/generate` | Generate a sermon pack using AI |
 
 ## Disclaimer
 
@@ -68,14 +90,7 @@ This tool generates sermon preparation material as a **starting point** for pray
 - Adapt material to fit their congregation's specific needs, context, and doctrinal convictions
 - Recognize that this tool assists preparation but does not replace the leading of the Holy Spirit or the authority of Scripture
 
-No AI-generated or algorithmically generated biblical/theological content should be considered authoritative. The Word of God, as revealed in Scripture, remains the sole authority for faith and practice.
-
-## Tech Stack
-
-- **Next.js 14** — React framework with App Router
-- **TypeScript** — Type-safe development
-- **No external UI libraries** — Clean, custom CSS for a polished but lightweight experience
-- **localStorage** — Client-side persistence (no database needed)
+When AI-powered generation is used, the output is produced by a language model — it is a tool, not an authority. The Word of God, as revealed in Scripture, remains the sole authority for faith and practice. The offline/deterministic mode requires no AI and no API key.
 
 ## License
 

@@ -1,4 +1,4 @@
-import { SermonInput, SermonPack, SermonOutlinePoint, SermonTone } from './types'
+import { SermonInput, SermonPack, SermonOutlinePoint, SermonTone, RelatedVideo, WorshipSong } from './types'
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
@@ -41,19 +41,36 @@ const audienceHints: Record<string, string[]> = {
   default: ['believers seeking to grow in faith', 'those navigating life\'s challenges', 'people hungry for God\'s Word'],
 }
 
+const denominationLabels: Record<string, string> = {
+  'catholic': 'Roman Catholic',
+  'reformed': 'Reformed',
+  'baptist': 'Baptist',
+  'methodist': 'Methodist',
+  'pentecostal': 'Pentecostal',
+  'lutheran': 'Lutheran',
+  'anglican': 'Anglican',
+  'non-denominational': 'Non-Denominational',
+  'other': 'Ecumenical',
+}
+
 function pickTitle(input: SermonInput): string {
   const topic = input.topic.trim()
   const scripture = input.scripture.trim()
+  let title: string
   if (scripture && topic) {
-    return `${topic}: Insights from ${scripture}`
+    title = `${topic}: Insights from ${scripture}`
+  } else if (topic) {
+    title = topic
+  } else if (scripture) {
+    title = `Understanding ${scripture}`
+  } else {
+    title = 'A Message of Hope and Truth'
   }
-  if (topic) {
-    return topic
+  if (input.denomination && input.denomination !== 'non-denominational') {
+    const label = denominationLabels[input.denomination] ?? input.denomination
+    title = `${title} — ${label} Perspective`
   }
-  if (scripture) {
-    return `Understanding ${scripture}`
-  }
-  return 'A Message of Hope and Truth'
+  return title
 }
 
 function pickBigIdea(input: SermonInput): string {
@@ -339,6 +356,94 @@ function pickClosingChallenge(input: SermonInput): string {
   return closings[idx]
 }
 
+export function pickRelatedVideos(input: SermonInput): RelatedVideo[] {
+  const topic = input.topic.trim() || 'faith'
+  return [
+    {
+      title: `${topic} — Bible Project Overview`,
+      description: `A beautifully animated walk through the biblical theme of ${topic.toLowerCase()} and its significance throughout Scripture.`,
+      searchQuery: `${topic} Bible Project overview`,
+    },
+    {
+      title: `Pastor's Perspective on ${topic}`,
+      description: `A thoughtful sermon excerpt from a well-known pastor exploring ${topic.toLowerCase()} with depth and pastoral care.`,
+      searchQuery: `sermon on ${topic} pastor teaching`,
+    },
+    {
+      title: `Historical Context of ${input.scripture || topic}`,
+      description: `An engaging visual explanation of the historical and cultural background behind ${input.scripture || 'this passage'} to enrich your study.`,
+      searchQuery: `${input.scripture || topic} historical context bible study`,
+    },
+    {
+      title: `${topic} in Everyday Life`,
+      description: `A relatable testimony or teaching illustration showing how ${topic.toLowerCase()} applies to real-world challenges today.`,
+      searchQuery: `${topic} Christian testimony real life`,
+    },
+    {
+      title: `Worship through ${topic}`,
+      description: `A reflective meditation or devotional video centered on ${topic.toLowerCase()}, designed to prepare hearts for preaching and prayer.`,
+      searchQuery: `${topic} worship meditation devotional`,
+    },
+  ]
+}
+
+export function pickWorshipSongs(input: SermonInput): WorshipSong[] {
+  const topic = input.topic.trim().toLowerCase()
+
+  // Topic-based overrides for well-known themes
+  const topicSongs: Record<string, WorshipSong[]> = {
+    love: [
+      { title: 'How He Loves', artist: 'John Mark McMillan / David Crowder Band', searchQuery: 'How He Loves David Crowder Band' },
+      { title: 'Reckless Love', artist: 'Cory Asbury', searchQuery: 'Reckless Love Cory Asbury' },
+      { title: 'Love Has a Name', artist: 'Jesus Culture', searchQuery: 'Love Has a Name Jesus Culture' },
+      { title: 'One Thing Remains', artist: 'Jesus Culture', searchQuery: 'One Thing Remains Jesus Culture' },
+      { title: 'The Passion', artist: 'Hillsong Worship', searchQuery: 'The Passion Hillsong Worship' },
+    ],
+    grace: [
+      { title: 'Gracefully Broken', artist: 'Matt Redman', searchQuery: 'Gracefully Broken Matt Redman' },
+      { title: 'Amazing Grace (My Chains Are Gone)', artist: 'Chris Tomlin', searchQuery: 'Amazing Grace My Chains Are Gone Chris Tomlin' },
+      { title: 'Scandal of Grace', artist: 'Hillsong UNITED', searchQuery: 'Scandal of Grace Hillsong UNITED' },
+      { title: 'Your Grace Is Enough', artist: 'Matt Maher', searchQuery: 'Your Grace Is Enough Matt Maher' },
+      { title: 'Grace Greater Than Our Sin', artist: 'Traditional / Modern Renditions', searchQuery: 'Grace Greater Than Our Sin hymn' },
+    ],
+    hope: [
+      { title: 'Living Hope', artist: 'Phil Wickham', searchQuery: 'Living Hope Phil Wickham' },
+      { title: 'Christ Is Enough', artist: 'Hillsong Worship', searchQuery: 'Christ Is Enough Hillsong Worship' },
+      { title: 'Resurrecting', artist: 'Elevation Worship', searchQuery: 'Resurrecting Elevation Worship' },
+      { title: 'Even When It Hurts', artist: 'Hillsong UNITED', searchQuery: 'Even When It Hurts Hillsong UNITED' },
+      { title: 'Faithful to the End', artist: 'Mosaic MSC', searchQuery: 'Faithful to the End Mosaic MSC' },
+    ],
+    faith: [
+      { title: 'Oceans (Where Feet May Fail)', artist: 'Hillsong UNITED', searchQuery: 'Oceans Hillsong UNITED' },
+      { title: 'Trust In You', artist: 'Lauren Daigle', searchQuery: 'Trust In You Lauren Daigle' },
+      { title: 'Way Maker', artist: 'Sinach', searchQuery: 'Way Maker Sinach' },
+      { title: 'Do It Again', artist: 'Elevation Worship', searchQuery: 'Do It Again Elevation Worship' },
+      { title: "Firm Foundation (He Won't)", artist: 'Cody Carnes', searchQuery: "Firm Foundation Cody Carnes" },
+    ],
+    forgiveness: [
+      { title: 'Forgiven', artist: 'Crowder', searchQuery: 'Forgiven Crowder' },
+      { title: 'Who You Say I Am', artist: 'Hillsong Worship', searchQuery: 'Who You Say I Am Hillsong Worship' },
+      { title: 'Clean', artist: 'Natalie Grant', searchQuery: 'Clean Natalie Grant' },
+      { title: 'Redeemed', artist: 'Big Daddy Weave', searchQuery: 'Redeemed Big Daddy Weave' },
+      { title: 'Eyes On You', artist: 'Lauren Daigle', searchQuery: 'Eyes On You Lauren Daigle' },
+    ],
+  }
+
+  if (topicSongs[topic]) {
+    return topicSongs[topic]
+  }
+
+  // Default set for any other topic
+  return [
+    { title: 'Goodness of God', artist: 'Bethel Music / Jenn Johnson', searchQuery: 'Goodness of God Bethel Music' },
+    { title: 'Build My Life', artist: 'Pat Barrett', searchQuery: 'Build My Life Pat Barrett' },
+    { title: 'Great Are You Lord', artist: 'All Sons & Daughters', searchQuery: 'Great Are You Lord All Sons & Daughters' },
+    { title: 'Holy Spirit', artist: 'Francesca Battistelli', searchQuery: 'Holy Spirit Francesca Battistelli' },
+    { title: 'What a Beautiful Name', artist: 'Hillsong Worship', searchQuery: 'What a Beautiful Name Hillsong Worship' },
+    { title: 'Shout to the Lord', artist: 'Darlene Zschech', searchQuery: 'Shout to the Lord Darlene Zschech' },
+  ]
+}
+
 export function generateSermonPack(input: SermonInput): SermonPack {
   const scripture = input.scripture.trim()
   return {
@@ -360,6 +465,8 @@ export function generateSermonPack(input: SermonInput): SermonPack {
     smallGroupTeachingNotes: pickSmallGroupNotes(input),
     prayerPoints: pickPrayerPoints(input),
     closingChallenge: pickClosingChallenge(input),
+    relatedVideos: pickRelatedVideos(input),
+    worshipSongs: pickWorshipSongs(input),
   }
 }
 
@@ -368,7 +475,7 @@ export function packToMarkdown(pack: SermonPack): string {
   lines.push(`# ${pack.title}`)
   lines.push('')
   lines.push(`> *Generated: ${new Date(pack.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}*`)
-  lines.push(`> *Tone: ${pack.input.tone} | Audience: ${pack.input.audience || 'General'} | Length: ${pack.input.sermonLength || 'Standard'}*`)
+  lines.push(`> *Tone: ${pack.input.tone} | Audience: ${pack.input.audience || 'General'} | Length: ${pack.input.sermonLength || 'Standard'}${pack.input.denomination && pack.input.denomination !== 'non-denominational' ? ` | Denomination: ${denominationLabels[pack.input.denomination] ?? pack.input.denomination}` : ''}*`)
   lines.push('')
 
   lines.push('---')
@@ -466,6 +573,24 @@ export function packToMarkdown(pack: SermonPack): string {
   lines.push('')
   lines.push(pack.closingChallenge)
   lines.push('')
+
+  lines.push('## Related Videos')
+  lines.push('')
+  for (const v of pack.relatedVideos) {
+    lines.push(`- **${v.title}** — ${v.description}`)
+    if (v.videoId) lines.push(`  Watch: https://www.youtube.com/watch?v=${v.videoId}`)
+    lines.push(`  Search: ${v.searchQuery}`)
+    lines.push('')
+  }
+
+  lines.push('## Worship Songs')
+  lines.push('')
+  for (const s of pack.worshipSongs) {
+    lines.push(`- **${s.title}** by ${s.artist}`)
+    if (s.videoId) lines.push(`  Watch: https://www.youtube.com/watch?v=${s.videoId}`)
+    lines.push(`  Search: ${s.searchQuery}`)
+    lines.push('')
+  }
 
   lines.push('---')
   lines.push('')
